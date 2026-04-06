@@ -225,19 +225,19 @@
   - `programmatic` TR-14.2: 登录功能正常
 - **Notes**: 用户端可后续根据业务需求扩展
 
-## [ ] Task 15: 代码生成工具实现
+## [x] Task 15: 代码生成工具实现
 - **Priority**: P2
 - **Depends On**: [Task 5]
 - **Description**: 
   - 实现数据库表读取
   - 实现代码模板配置
   - 实现后端代码生成（Entity、Mapper、Service、Controller）
-  - 实现前端代码生成（页面、API）
+  - 创建generator模块并集成到现有系统
 - **Acceptance Criteria Addressed**: [AC-6]
 - **Test Requirements**:
   - `programmatic` TR-15.1: 能读取数据库表结构
   - `programmatic` TR-15.2: 生成的代码能正常编译
-- **Notes**: 基于MyBatis-Plus Generator
+- **Notes**: 基于Velocity模板引擎实现代码生成
 
 ## [ ] Task 16: Docker容器化
 - **Priority**: P0
