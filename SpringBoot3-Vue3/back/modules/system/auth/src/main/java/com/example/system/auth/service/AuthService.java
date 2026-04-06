@@ -8,6 +8,9 @@ import com.example.system.auth.entity.SysUser;
 import com.example.system.auth.mapper.SysUserMapper;
 import com.example.system.auth.utils.JwtUtil;
 import com.example.system.auth.vo.LoginResp;
+import com.example.system.audit.entity.SysLoginLog;
+import com.example.system.audit.service.SysOperLogService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +35,9 @@ public class AuthService {
     @Autowired
     private TokenVersionService tokenVersionService;
 
+    @Autowired
+    private SysOperLogService sysOperLogService;
+
     @Value("${jwt.cookie.domain:localhost}")
     private String cookieDomain;
 
@@ -44,33 +50,59 @@ public class AuthService {
     @Value("${jwt.cookie.http-only:true}")
     private boolean cookieHttpOnly;
 
-    public LoginResp login(LoginReq req, HttpServletResponse response) {
-        LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SysUser::getUsername, req.getUsername());
-        SysUser user = sysUserMapper.selectOne(wrapper);
+    public LoginResp login(LoginReq req, HttpServletRequest request, HttpServletResponse response) {
+        SysLoginLog loginLog = new SysLoginLog();
+        loginLog.setUsername(req.getUsername());
+        loginLog.setIpaddr(request.getRemoteAddr());
 
-        if (user == null) {
-            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        try {
+            LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(SysUser::getUsername, req.getUsername());
+            SysUser user = sysUserMapper.selectOne(wrapper);
+
+            if (user == null) {
+                loginLog.setStatus(1);
+                loginLog.setMsg("用户不存在");
+                sysOperLogService.saveLoginLog(loginLog);
+                throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+            }
+
+            if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
+                loginLog.setStatus(1);
+                loginLog.setMsg("密码错误");
+                sysOperLogService.saveLoginLog(loginLog);
+                throw new BusinessException(ErrorCode.PASSWORD_ERROR);
+            }
+
+            if (user.getStatus() == 0) {
+                loginLog.setStatus(1);
+                loginLog.setMsg("用户已禁用");
+                sysOperLogService.saveLoginLog(loginLog);
+                throw new BusinessException(ErrorCode.USER_DISABLED);
+            }
+
+            user.setLastLoginTime(LocalDateTime.now());
+            sysUserMapper.updateById(user);
+
+            Long version = tokenVersionService.getCurrentVersion(user.getId());
+            String accessToken = jwtUtil.generateAccessToken(user.getId(), version);
+            String refreshToken = jwtUtil.generateRefreshToken(user.getId(), version);
+
+            setCookies(response, accessToken, refreshToken);
+
+            loginLog.setStatus(0);
+            loginLog.setMsg("登录成功");
+            sysOperLogService.saveLoginLog(loginLog);
+
+            return new LoginResp(user.getId(), user.getUsername(), user.getName());
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            loginLog.setStatus(1);
+            loginLog.setMsg(e.getMessage());
+            sysOperLogService.saveLoginLog(loginLog);
+            throw e;
         }
-
-        if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
-            throw new BusinessException(ErrorCode.PASSWORD_ERROR);
-        }
-
-        if (user.getStatus() == 0) {
-            throw new BusinessException(ErrorCode.USER_DISABLED);
-        }
-
-        user.setLastLoginTime(LocalDateTime.now());
-        sysUserMapper.updateById(user);
-
-        Long version = tokenVersionService.getCurrentVersion(user.getId());
-        String accessToken = jwtUtil.generateAccessToken(user.getId(), version);
-        String refreshToken = jwtUtil.generateRefreshToken(user.getId(), version);
-
-        setCookies(response, accessToken, refreshToken);
-
-        return new LoginResp(user.getId(), user.getUsername(), user.getName());
     }
 
     public void refreshToken(String refreshToken, HttpServletResponse response) {
@@ -92,11 +124,25 @@ public class AuthService {
         setCookies(response, newAccessToken, newRefreshToken);
     }
 
-    public void logout(Long userId, HttpServletResponse response) {
-        if (userId != null) {
-            tokenVersionService.incrementVersion(userId);
+    public void logout(Long userId, HttpServletRequest request, HttpServletResponse response) {
+        SysLoginLog loginLog = new SysLoginLog();
+        loginLog.setIpaddr(request.getRemoteAddr());
+
+        try {
+            if (userId != null) {
+                tokenVersionService.incrementVersion(userId);
+            }
+            clearCookies(response);
+
+            loginLog.setStatus(0);
+            loginLog.setMsg("登出成功");
+            sysOperLogService.saveLoginLog(loginLog);
+        } catch (Exception e) {
+            loginLog.setStatus(1);
+            loginLog.setMsg(e.getMessage());
+            sysOperLogService.saveLoginLog(loginLog);
+            throw e;
         }
-        clearCookies(response);
     }
 
     private void setCookies(HttpServletResponse response, String accessToken, String refreshToken) {

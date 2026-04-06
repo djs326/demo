@@ -27,8 +27,8 @@ public class AuthController {
 
     @Operation(summary = "用户登录")
     @PostMapping("/login")
-    public Result<LoginResp> login(@Valid @RequestBody LoginReq req, HttpServletResponse response) {
-        LoginResp loginResp = authService.login(req, response);
+    public Result<LoginResp> login(@Valid @RequestBody LoginReq req, HttpServletRequest request, HttpServletResponse response) {
+        LoginResp loginResp = authService.login(req, request, response);
         return Result.success(loginResp);
     }
 
@@ -46,9 +46,9 @@ public class AuthController {
         String accessToken = getTokenFromCookie(request, "access_token");
         if (accessToken != null && jwtUtil.validateToken(accessToken)) {
             Long userId = jwtUtil.getUserIdFromToken(accessToken);
-            authService.logout(userId, response);
+            authService.logout(userId, request, response);
         } else {
-            authService.logout(null, response);
+            authService.logout(null, request, response);
         }
         return Result.success();
     }

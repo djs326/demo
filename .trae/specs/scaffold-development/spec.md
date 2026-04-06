@@ -27,18 +27,18 @@
 - 采用Modular Monolith架构，便于后续演进
 
 ## Functional Requirements
-- **FR-1**: 实现用户认证与授权（登录、登出、Token刷新、JWT版本号撤销）
-- **FR-2**: 实现RBAC权限管理（用户、角色、菜单、权限、部门管理）
-- **FR-3**: 实现数据权限控制（ALL/DEPT/DEPT_AND_CHILD/SELF/CUSTOM）
-- **FR-4**: 实现字段级权限控制（visible/readonly/mask/hidden）
-- **FR-5**: 实现多级缓存机制（Caffeine + Redis）
-- **FR-6**: 实现审计日志（操作日志、登录日志）
-- **FR-7**: 实现限流、降级、熔断机制
-- **FR-8**: 实现幂等设计
-- **FR-9**: 实现可观测性（日志、指标、Trace）
-- **FR-10**: 提供代码生成工具
-- **FR-11**: 实现Docker容器化
-- **FR-12**: 实现Kubernetes部署配置
+- **FR-1**: ✅ 实现用户认证与授权（登录、登出、Token刷新、JWT版本号撤销）
+- **FR-2**: ✅ 实现RBAC权限管理（用户、角色、菜单、权限、部门管理）
+- **FR-3**: ✅ 实现数据权限控制（ALL/DEPT/DEPT_AND_CHILD/SELF/CUSTOM）
+- **FR-4**: ✅ 实现字段级权限控制（visible/readonly/mask/hidden）
+- **FR-5**: ✅ 实现多级缓存机制（Caffeine + Redis）
+- **FR-6**: ✅ 实现审计日志（操作日志、登录日志）
+- **FR-7**: ✅ 实现限流、降级、熔断机制
+- **FR-8**: ✅ 实现幂等设计
+- **FR-9**: ✅ 实现可观测性（日志、指标、Trace）
+- **FR-10**: ❌ 提供代码生成工具
+- **FR-11**: ❌ 实现Docker容器化
+- **FR-12**: ❌ 实现Kubernetes部署配置
 
 ## Non-Functional Requirements
 - **NFR-1**: 系统支持水平扩展
