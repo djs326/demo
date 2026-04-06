@@ -94,15 +94,15 @@
 - [x] 生成的代码能正常编译
 
 ## Docker容器化
-- [ ] Docker镜像构建成功
-- [ ] docker-compose能正常启动
-- [ ] 容器化应用能正常访问
+- [x] Docker镜像构建成功
+- [x] docker-compose能正常启动
+- [x] 容器化应用能正常访问
 
 ## Kubernetes部署
-- [ ] Kubernetes资源能正常创建
-- [ ] Pod能正常启动
-- [ ] 服务能正常访问
-- [ ] HPA能正常扩缩容
+- [x] Kubernetes资源能正常创建
+- [x] Pod能正常启动
+- [x] 服务能正常访问
+- [x] HPA能正常扩缩容
 
 ## 集成测试与文档
 - [ ] 集成测试通过

@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: springboot-vue-demo
+  labels:
+    app: backend
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+    name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: front-admin-service
+  namespace: springboot-vue-demo
+  labels:
+    app: front-admin
+spec:
+  type: ClusterIP
+  selector:
+    app: front-admin
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+    name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: front-user-service
+  namespace: springboot-vue-demo
+  labels:
+    app: front-user
+spec:
+  type: ClusterIP
+  selector:
+    app: front-user
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+    name: http
