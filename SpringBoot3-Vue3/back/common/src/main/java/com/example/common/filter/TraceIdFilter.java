@@ -14,16 +14,26 @@ import java.io.IOException;
 public class TraceIdFilter extends OncePerRequestFilter {
 
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
+    private static final String SPAN_ID_HEADER = "X-Span-Id";
+    private static final String PARENT_SPAN_ID_HEADER = "X-Parent-Span-Id";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
             String traceId = request.getHeader(TRACE_ID_HEADER);
+            String spanId = request.getHeader(SPAN_ID_HEADER);
+            String parentSpanId = request.getHeader(PARENT_SPAN_ID_HEADER);
+            
             TraceIdUtils.setOrGenerateTraceId(traceId);
+            TraceIdUtils.startSpan(spanId, parentSpanId);
+            
+            response.addHeader(TRACE_ID_HEADER, TraceIdUtils.getTraceId());
+            response.addHeader(SPAN_ID_HEADER, TraceIdUtils.getSpanId());
+            
             filterChain.doFilter(request, response);
         } finally {
-            TraceIdUtils.removeTraceId();
+            TraceIdUtils.clear();
         }
     }
 }

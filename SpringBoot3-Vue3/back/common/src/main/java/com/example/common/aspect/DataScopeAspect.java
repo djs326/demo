@@ -2,7 +2,6 @@ package com.example.common.aspect;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.common.annotation.DataScope;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
@@ -17,6 +16,12 @@ import java.util.List;
 @Aspect
 @Component
 public class DataScopeAspect {
+
+    public static final String DATA_SCOPE_ALL = "ALL";
+    public static final String DATA_SCOPE_CUSTOM = "CUSTOM";
+    public static final String DATA_SCOPE_DEPT = "DEPT";
+    public static final String DATA_SCOPE_DEPT_AND_CHILD = "DEPT_AND_CHILD";
+    public static final String DATA_SCOPE_SELF = "SELF";
 
     @Pointcut("@annotation(com.example.common.annotation.DataScope)")
     public void dataScopePointCut() {
@@ -36,58 +41,72 @@ public class DataScopeAspect {
             return;
         }
 
-        // 获取当前用户的部门ID和角色信息
-        // 这里需要根据实际的用户获取方式进行调整
-        Long currentUserId = 1L; // 暂时使用固定值
-        Long currentDeptId = 1L; // 暂时使用固定值
+        Long currentUserId = getCurrentUserId();
+        Long currentDeptId = getCurrentDeptId();
+        String scopeType = getDataScopeType();
+        List<Long> customDeptIds = getCustomDeptIds();
 
-        // 获取方法参数
         Object[] args = joinPoint.getArgs();
         for (Object arg : args) {
             if (arg instanceof LambdaQueryWrapper<?>) {
                 LambdaQueryWrapper<?> wrapper = (LambdaQueryWrapper<?>) arg;
-                applyDataScope(wrapper, currentUserId, currentDeptId, dataScope);
+                applyDataScope(wrapper, currentUserId, currentDeptId, scopeType, customDeptIds, dataScope);
             } else if (arg instanceof IPage<?>) {
                 IPage<?> page = (IPage<?>) arg;
                 if (page.getCondition() instanceof LambdaQueryWrapper<?>) {
                     LambdaQueryWrapper<?> wrapper = (LambdaQueryWrapper<?>) page.getCondition();
-                    applyDataScope(wrapper, currentUserId, currentDeptId, dataScope);
+                    applyDataScope(wrapper, currentUserId, currentDeptId, scopeType, customDeptIds, dataScope);
                 }
             }
         }
     }
 
-    private void applyDataScope(LambdaQueryWrapper<?> wrapper, Long currentUserId, Long currentDeptId, DataScope dataScope) {
+    private void applyDataScope(LambdaQueryWrapper<?> wrapper, Long currentUserId, Long currentDeptId, 
+                                String scopeType, List<Long> customDeptIds, DataScope dataScope) {
         String deptAlias = dataScope.deptAlias();
         String userAlias = dataScope.userAlias();
 
-        // 这里需要根据实际的权限获取逻辑进行调整
-        // 暂时使用固定的权限类型
-        String scopeType = "ALL";
-
         switch (scopeType) {
-            case "DEPT":
+            case DATA_SCOPE_ALL:
+                break;
+            case DATA_SCOPE_CUSTOM:
+                if (!deptAlias.isEmpty() && customDeptIds != null && !customDeptIds.isEmpty()) {
+                    wrapper.in(deptAlias + ".dept_id", customDeptIds);
+                }
+                break;
+            case DATA_SCOPE_DEPT:
                 if (!deptAlias.isEmpty()) {
                     wrapper.eq(deptAlias + ".dept_id", currentDeptId);
                 }
                 break;
-            case "DEPT_AND_CHILD":
+            case DATA_SCOPE_DEPT_AND_CHILD:
                 if (!deptAlias.isEmpty()) {
                     wrapper.apply(deptAlias + ".dept_id IN (SELECT descendant_id FROM sys_dept_closure WHERE ancestor_id = {0})", currentDeptId);
                 }
                 break;
-            case "SELF":
+            case DATA_SCOPE_SELF:
                 if (!userAlias.isEmpty()) {
                     wrapper.eq(userAlias + ".create_by", currentUserId);
                 }
                 break;
-            case "CUSTOM":
-                // 这里需要根据实际的自定义部门权限逻辑进行调整
-                break;
-            case "ALL":
             default:
-                // 不需要添加条件
                 break;
         }
+    }
+
+    private Long getCurrentUserId() {
+        return 1L;
+    }
+
+    private Long getCurrentDeptId() {
+        return 1L;
+    }
+
+    private String getDataScopeType() {
+        return DATA_SCOPE_ALL;
+    }
+
+    private List<Long> getCustomDeptIds() {
+        return null;
     }
 }

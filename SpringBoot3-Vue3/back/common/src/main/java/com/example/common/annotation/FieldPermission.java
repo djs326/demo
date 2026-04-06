@@ -10,6 +10,8 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface FieldPermission {
+    String tableName() default "";
+    String fieldName() default "";
     boolean hidden() default false;
     boolean mask() default false;
     MaskType maskType() default MaskType.DEFAULT;
