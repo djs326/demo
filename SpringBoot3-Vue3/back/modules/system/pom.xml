@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>back</artifactId>
+        <groupId>com.example</groupId>
+        <version>1.0.0</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>system</artifactId>
+    <packaging>pom</packaging>
+    <name>system</name>
+    <description>System Module</description>
+
+    <modules>
+        <module>auth</module>
+        <module>user</module>
+        <module>role</module>
+        <module>menu</module>
+        <module>permission</module>
+    </modules>
+</project>
