@@ -100,10 +100,10 @@
   - `programmatic` TR-6.4: 数据权限查询性能测试通过
 - **Notes**: 参考技术架构设计文档5.1.2节
 
-## [ ] Task 7: 字段权限实现
+## [x] Task 7: 字段权限实现
 - **Priority**: P1
 - **Depends On**: [Task 6]
-- **Description**: 
+- **Description**:
   - 实现字段权限注解
   - 实现字段权限AOP拦截器
   - 实现脱敏规则
@@ -115,7 +115,7 @@
   - `human-judgement` TR-7.3: 手机号、身份证、邮箱脱敏格式正确
 - **Notes**: 参考技术架构设计文档5.1.3节
 
-## [ ] Task 8: 多级缓存实现
+## [/] Task 8: 多级缓存实现
 - **Priority**: P1
 - **Depends On**: [Task 4]
 - **Description**: 
