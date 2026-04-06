@@ -64,7 +64,7 @@
   - `programmatic` TR-4.4: 登出后Token失效
 - **Notes**: Token存储在HttpOnly Cookie中
 
-## [ ] Task 5: RBAC权限管理后端实现
+## [x] Task 5: RBAC权限管理后端实现
 - **Priority**: P0
 - **Depends On**: [Task 4]
 - **Description**: 
@@ -83,7 +83,7 @@
   - `programmatic` TR-5.4: 权限变更后缓存失效
 - **Notes**: 使用MyBatis-Plus实现CRUD
 
-## [ ] Task 6: 部门管理与数据权限实现
+## [x] Task 6: 部门管理与数据权限实现
 - **Priority**: P0
 - **Depends On**: [Task 5]
 - **Description**: 
@@ -132,7 +132,7 @@
   - `programmatic` TR-8.4: 缓存防护措施生效
 - **Notes**: 参考技术架构设计文档5.2节
 
-## [ ] Task 9: 审计日志实现
+## [x] Task 9: 审计日志实现
 - **Priority**: P1
 - **Depends On**: [Task 3]
 - **Description**: 

@@ -6,6 +6,7 @@
         <artifactId>back</artifactId>
         <groupId>com.example</groupId>
         <version>1.0.0</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -20,5 +21,6 @@
         <module>role</module>
         <module>menu</module>
         <module>permission</module>
+        <module>dept</module>
     </modules>
 </project>
