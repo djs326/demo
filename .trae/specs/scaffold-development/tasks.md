@@ -176,7 +176,7 @@
   - `programmatic` TR-11.2: 幂等Key过期后可重新请求
 - **Notes**: 参考技术架构设计文档5.6节
 
-## [/] Task 12: 可观测性实现
+## [x] Task 12: 可观测性实现
 - **Priority**: P1
 - **Depends On**: [Task 3]
 - **Description**: 
