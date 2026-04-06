@@ -273,7 +273,7 @@
   - `programmatic` TR-17.4: HPA能正常扩缩容
 - **Notes**: 参考技术架构设计文档第6.2节
 
-## [ ] Task 18: 集成测试与文档
+## [x] Task 18: 集成测试与文档
 - **Priority**: P1
 - **Depends On**: [Task 17]
 - **Description**: 
