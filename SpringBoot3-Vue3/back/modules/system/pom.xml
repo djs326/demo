@@ -22,5 +22,6 @@
         <module>menu</module>
         <module>permission</module>
         <module>dept</module>
+        <module>audit</module>
     </modules>
 </project>

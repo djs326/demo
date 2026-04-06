@@ -140,11 +140,13 @@
   - 实现操作日志AOP拦截器
   - 实现登录日志记录
   - 实现日志查询接口
+  - 创建audit模块并集成到现有系统
 - **Acceptance Criteria Addressed**: [AC-7]
 - **Test Requirements**:
   - `programmatic` TR-9.1: 操作日志正确记录
   - `programmatic` TR-9.2: 登录日志正确记录
   - `programmatic` TR-9.3: 日志包含traceId
+  - `programmatic` TR-9.4: 审计日志查询接口正常工作
 - **Notes**: 参考技术架构设计文档第3.5节
 
 ## [x] Task 10: 限流、降级、熔断实现
