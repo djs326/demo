@@ -1,6 +1,7 @@
 package com.example.common.aspect;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.common.annotation.DataScope;
 import org.aspectj.lang.JoinPoint;
@@ -51,17 +52,32 @@ public class DataScopeAspect {
             if (arg instanceof LambdaQueryWrapper<?>) {
                 LambdaQueryWrapper<?> wrapper = (LambdaQueryWrapper<?>) arg;
                 applyDataScope(wrapper, currentUserId, currentDeptId, scopeType, customDeptIds, dataScope);
-            } else if (arg instanceof IPage<?>) {
-                IPage<?> page = (IPage<?>) arg;
-                if (page.getCondition() instanceof LambdaQueryWrapper<?>) {
-                    LambdaQueryWrapper<?> wrapper = (LambdaQueryWrapper<?>) page.getCondition();
-                    applyDataScope(wrapper, currentUserId, currentDeptId, scopeType, customDeptIds, dataScope);
-                }
+            } else if (arg instanceof QueryWrapper<?>) {
+                QueryWrapper<?> wrapper = (QueryWrapper<?>) arg;
+                applyDataScope(wrapper, currentUserId, currentDeptId, scopeType, customDeptIds, dataScope);
             }
         }
     }
 
     private void applyDataScope(LambdaQueryWrapper<?> wrapper, Long currentUserId, Long currentDeptId, 
+                                String scopeType, List<Long> customDeptIds, DataScope dataScope) {
+        String deptAlias = dataScope.deptAlias();
+        String userAlias = dataScope.userAlias();
+
+        switch (scopeType) {
+            case DATA_SCOPE_ALL:
+                break;
+            case DATA_SCOPE_DEPT_AND_CHILD:
+                if (!deptAlias.isEmpty()) {
+                    wrapper.apply(deptAlias + ".dept_id IN (SELECT descendant_id FROM sys_dept_closure WHERE ancestor_id = {0})", currentDeptId);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void applyDataScope(QueryWrapper<?> wrapper, Long currentUserId, Long currentDeptId, 
                                 String scopeType, List<Long> customDeptIds, DataScope dataScope) {
         String deptAlias = dataScope.deptAlias();
         String userAlias = dataScope.userAlias();
