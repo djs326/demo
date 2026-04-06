@@ -1,10 +1,6 @@
 package com.example.common.aspect;
 
 import com.example.common.annotation.OperLog;
-import com.example.system.audit.entity.SysOperLog;
-import com.example.system.audit.service.SysOperLogService;
-import com.example.system.user.entity.SysUser;
-import com.example.system.user.service.SysUserService;
 import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.AfterReturning;
 import org.aspectj.lang.annotation.AfterThrowing;
@@ -15,7 +11,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -23,14 +19,6 @@ import java.util.Arrays;
 @Aspect
 @Component
 public class OperLogAspect {
-
-    private final SysOperLogService sysOperLogService;
-    private final SysUserService sysUserService;
-
-    public OperLogAspect(SysOperLogService sysOperLogService, SysUserService sysUserService) {
-        this.sysOperLogService = sysOperLogService;
-        this.sysUserService = sysUserService;
-    }
 
     @Pointcut("@annotation(com.example.common.annotation.OperLog)")
     public void operLogPointCut() {
@@ -57,31 +45,26 @@ public class OperLogAspect {
         Method method = signature.getMethod();
         OperLog operLog = method.getAnnotation(OperLog.class);
 
-        SysOperLog log = new SysOperLog();
-        log.setTitle(operLog.title());
-        log.setBusinessType(operLog.businessType());
-        log.setMethod(method.getDeclaringClass().getName() + "." + method.getName());
-        log.setRequestMethod(request.getMethod());
-        log.setOperatorType(operLog.operatorType());
-        log.setOperUrl(request.getRequestURI());
-        log.setOperIp(request.getRemoteAddr());
-        log.setOperParam(Arrays.toString(joinPoint.getArgs()));
-        log.setOperTime(LocalDateTime.now());
-
-        // 获取当前用户信息
-        // 这里需要根据实际的用户获取方式进行调整
-        // 暂时使用固定值
-        log.setOperName("admin");
-        log.setDeptName("技术部");
+        // 记录日志信息到控制台（暂时不保存到数据库，避免循环依赖）
+        System.out.println("=== 操作日志 ===");
+        System.out.println("标题: " + operLog.title());
+        System.out.println("业务类型: " + operLog.businessType());
+        System.out.println("方法: " + method.getDeclaringClass().getName() + "." + method.getName());
+        System.out.println("请求方法: " + request.getMethod());
+        System.out.println("操作人类型: " + operLog.operatorType());
+        System.out.println("操作URL: " + request.getRequestURI());
+        System.out.println("操作IP: " + request.getRemoteAddr());
+        System.out.println("操作参数: " + Arrays.toString(joinPoint.getArgs()));
+        System.out.println("操作时间: " + LocalDateTime.now());
+        System.out.println("操作人: admin");
+        System.out.println("部门: 技术部");
 
         if (e != null) {
-            log.setStatus(1);
-            log.setErrorMsg(e.getMessage());
+            System.out.println("状态: 失败");
+            System.out.println("错误信息: " + e.getMessage());
         } else {
-            log.setStatus(0);
-            log.setJsonResult(result != null ? result.toString() : "");
+            System.out.println("状态: 成功");
+            System.out.println("返回结果: " + (result != null ? result.toString() : ""));
         }
-
-        sysOperLogService.save(log);
     }
 }

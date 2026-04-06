@@ -5,7 +5,6 @@ import com.example.common.annotation.Idempotent;
 import jakarta.servlet.http.HttpServletRequest;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.springframework.core.LocalVariableTableParameterNameDiscoverer;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
@@ -16,11 +15,11 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 
 public class IdempotentKeyGenerator {
 
     private static final SpelExpressionParser PARSER = new SpelExpressionParser();
-    private static final LocalVariableTableParameterNameDiscoverer DISCOVERER = new LocalVariableTableParameterNameDiscoverer();
 
     public static String generate(ProceedingJoinPoint joinPoint, Idempotent idempotent) {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
@@ -107,13 +106,11 @@ public class IdempotentKeyGenerator {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
         Object[] args = joinPoint.getArgs();
-        String[] paramNames = DISCOVERER.getParameterNames(method);
+        Parameter[] parameters = method.getParameters();
 
         EvaluationContext context = new StandardEvaluationContext();
-        if (paramNames != null) {
-            for (int i = 0; i < paramNames.length; i++) {
-                context.setVariable(paramNames[i], args[i]);
-            }
+        for (int i = 0; i < parameters.length; i++) {
+            context.setVariable(parameters[i].getName(), args[i]);
         }
 
         Expression expression = PARSER.parseExpression(spel);
