@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: springboot-app-config
+  namespace: springboot-vue-demo
+data:
+  application.yml: |
+    spring:
+      application:
+        name: springboot-app
+      datasource:
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://mysql-service:3306/demo_db?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+        username: root
+      redis:
+        host: redis-service
+        port: 6379
+        database: 0
+    server:
+      port: 8080
+    logging:
+      level:
+        root: INFO
+        com.example: DEBUG
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config-admin
+  namespace: springboot-vue-demo
+data:
+  nginx.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+        root /usr/share/nginx/html;
+        index index.html;
+        
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+        
+        location /api {
+            proxy_pass http://backend-service:8080;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config-user
+  namespace: springboot-vue-demo
+data:
+  nginx.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+        root /usr/share/nginx/html;
+        index index.html;
+        
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+        
+        location /api {
+            proxy_pass http://backend-service:8080;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }

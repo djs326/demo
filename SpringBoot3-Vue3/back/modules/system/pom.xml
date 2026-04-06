@@ -23,5 +23,6 @@
         <module>permission</module>
         <module>dept</module>
         <module>audit</module>
+        <module>generator</module>
     </modules>
 </project>
