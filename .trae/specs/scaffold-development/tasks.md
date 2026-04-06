@@ -115,10 +115,10 @@
   - `human-judgement` TR-7.3: 手机号、身份证、邮箱脱敏格式正确
 - **Notes**: 参考技术架构设计文档5.1.3节
 
-## [/] Task 8: 多级缓存实现
+## [x] Task 8: 多级缓存实现
 - **Priority**: P1
 - **Depends On**: [Task 4]
-- **Description**: 
+- **Description**:
   - 配置Caffeine本地缓存
   - 配置Redis分布式缓存
   - 实现多级缓存抽象
@@ -135,7 +135,7 @@
 ## [x] Task 9: 审计日志实现
 - **Priority**: P1
 - **Depends On**: [Task 3]
-- **Description**: 
+- **Description**:
   - 实现操作日志注解
   - 实现操作日志AOP拦截器
   - 实现登录日志记录
@@ -147,10 +147,10 @@
   - `programmatic` TR-9.3: 日志包含traceId
 - **Notes**: 参考技术架构设计文档第3.5节
 
-## [ ] Task 10: 限流、降级、熔断实现
+## [x] Task 10: 限流、降级、熔断实现
 - **Priority**: P1
 - **Depends On**: [Task 4]
-- **Description**: 
+- **Description**:
   - 实现IP限流
   - 实现用户限流
   - 实现接口级限流
@@ -163,10 +163,10 @@
   - `programmatic` TR-10.3: 熔断机制正常触发
 - **Notes**: 参考技术架构设计文档5.7、5.8节
 
-## [ ] Task 11: 幂等设计实现
+## [x] Task 11: 幂等设计实现
 - **Priority**: P1
 - **Depends On**: [Task 4]
-- **Description**: 
+- **Description**:
   - 实现幂等注解
   - 实现幂等拦截器
   - 实现Redis SETNX幂等控制
@@ -176,7 +176,7 @@
   - `programmatic` TR-11.2: 幂等Key过期后可重新请求
 - **Notes**: 参考技术架构设计文档5.6节
 
-## [ ] Task 12: 可观测性实现
+## [/] Task 12: 可观测性实现
 - **Priority**: P1
 - **Depends On**: [Task 3]
 - **Description**: 
