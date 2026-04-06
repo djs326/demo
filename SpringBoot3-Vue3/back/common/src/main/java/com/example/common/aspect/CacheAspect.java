@@ -1,6 +1,8 @@
 package com.example.common.aspect;
 
 import com.example.common.annotation.Cacheable;
+import com.example.common.annotation.CachePut;
+import com.example.common.annotation.CacheEvict;
 import com.example.common.service.cache.MultiLevelCacheService;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -21,11 +23,19 @@ public class CacheAspect {
     private MultiLevelCacheService multiLevelCacheService;
 
     @Pointcut("@annotation(com.example.common.annotation.Cacheable)")
-    public void cachePointcut() {
+    public void cacheablePointcut() {
     }
 
-    @Around("cachePointcut()")
-    public Object around(ProceedingJoinPoint joinPoint) throws Throwable {
+    @Pointcut("@annotation(com.example.common.annotation.CachePut)")
+    public void cachePutPointcut() {
+    }
+
+    @Pointcut("@annotation(com.example.common.annotation.CacheEvict)")
+    public void cacheEvictPointcut() {
+    }
+
+    @Around("cacheablePointcut()")
+    public Object aroundCacheable(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
         Cacheable cacheable = method.getAnnotation(Cacheable.class);
@@ -43,6 +53,52 @@ public class CacheAspect {
                 }
             }
         });
+    }
+
+    @Around("cachePutPointcut()")
+    public Object aroundCachePut(ProceedingJoinPoint joinPoint) throws Throwable {
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        Method method = signature.getMethod();
+        CachePut cachePut = method.getAnnotation(CachePut.class);
+
+        String cacheName = cachePut.cacheName();
+        String key = generateKey(cachePut.key(), joinPoint);
+
+        Object result = joinPoint.proceed();
+        multiLevelCacheService.put(cacheName, key, result);
+        return result;
+    }
+
+    @Around("cacheEvictPointcut()")
+    public Object aroundCacheEvict(ProceedingJoinPoint joinPoint) throws Throwable {
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        Method method = signature.getMethod();
+        CacheEvict cacheEvict = method.getAnnotation(CacheEvict.class);
+
+        String cacheName = cacheEvict.cacheName();
+        String key = generateKey(cacheEvict.key(), joinPoint);
+        boolean beforeInvocation = cacheEvict.beforeInvocation();
+        boolean allEntries = cacheEvict.allEntries();
+
+        if (beforeInvocation) {
+            evictCache(cacheName, key, allEntries);
+        }
+
+        Object result = joinPoint.proceed();
+
+        if (!beforeInvocation) {
+            evictCache(cacheName, key, allEntries);
+        }
+
+        return result;
+    }
+
+    private void evictCache(String cacheName, String key, boolean allEntries) {
+        if (allEntries) {
+            multiLevelCacheService.clear(cacheName);
+        } else {
+            multiLevelCacheService.evict(cacheName, key);
+        }
     }
 
     private String generateKey(String key, ProceedingJoinPoint joinPoint) {

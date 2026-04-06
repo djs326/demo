@@ -1,50 +1,70 @@
 package com.example.common.service.cache;
 
+import com.google.common.hash.BloomFilter;
+import com.google.common.hash.Funnels;
 import com.google.common.util.concurrent.RateLimiter;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 public class CacheProtectionService {
 
-    // 用于缓存穿透防护的布隆过滤器（简化实现，实际项目中可使用更高效的布隆过滤器）
-    private final Map<String, Boolean> bloomFilter = new ConcurrentHashMap<>();
+    @Value("${cache.bloom-filter.expected-insertions:1000000}")
+    private long expectedInsertions;
 
-    // 用于缓存击穿防护的信号量
+    @Value("${cache.bloom-filter.fpp:0.001}")
+    private double fpp;
+
+    @Value("${cache.rate-limiter.permits-per-second:100}")
+    private double permitsPerSecond;
+
+    @Value("${cache.random-expire-time-range:600000}")
+    private long randomExpireTimeRange;
+
+    private BloomFilter<String> bloomFilter;
+
     private final Map<String, Semaphore> semaphoreMap = new ConcurrentHashMap<>();
 
-    // 用于限流的令牌桶
-    private final RateLimiter rateLimiter = RateLimiter.create(100);
+    private final Map<String, ReentrantLock> lockMap = new ConcurrentHashMap<>();
 
-    /**
-     * 检查是否可能是缓存穿透
-     */
+    private RateLimiter rateLimiter;
+
+    @PostConstruct
+    public void init() {
+        bloomFilter = BloomFilter.create(
+                Funnels.stringFunnel(StandardCharsets.UTF_8),
+                expectedInsertions,
+                fpp
+        );
+        rateLimiter = RateLimiter.create(permitsPerSecond);
+    }
+
     public boolean isPossibleCachePenetration(String key) {
-        return !bloomFilter.containsKey(key);
+        return !bloomFilter.mightContain(key);
     }
 
-    /**
-     * 标记key已经存在，防止缓存穿透
-     */
     public void markKeyExists(String key) {
-        bloomFilter.put(key, true);
+        bloomFilter.put(key);
     }
 
-    /**
-     * 尝试获取信号量，防止缓存击穿
-     */
     public boolean tryAcquireSemaphore(String key) {
         Semaphore semaphore = semaphoreMap.computeIfAbsent(key, k -> new Semaphore(1));
-        return semaphore.tryAcquire();
+        try {
+            return semaphore.tryAcquire(1, 3, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
     }
 
-    /**
-     * 释放信号量
-     */
     public void releaseSemaphore(String key) {
         Semaphore semaphore = semaphoreMap.get(key);
         if (semaphore != null) {
@@ -52,17 +72,27 @@ public class CacheProtectionService {
         }
     }
 
-    /**
-     * 尝试获取令牌，进行限流
-     */
-    public boolean tryAcquireToken() {
-        return rateLimiter.tryAcquire(1, TimeUnit.SECONDS);
+    public ReentrantLock getLock(String key) {
+        return lockMap.computeIfAbsent(key, k -> new ReentrantLock());
     }
 
-    /**
-     * 为缓存键添加随机过期时间，防止缓存雪崩
-     */
+    public boolean tryAcquireToken() {
+        return rateLimiter.tryAcquire(1, 1, TimeUnit.SECONDS);
+    }
+
     public long getRandomExpireTime(long baseExpireTime) {
-        return baseExpireTime + (long) (Math.random() * 10 * 60 * 1000); // 添加0-10分钟的随机时间
+        return baseExpireTime + (long) (Math.random() * randomExpireTimeRange);
+    }
+
+    public void addNullValueProtection(String cacheName, String key, long expireTime, TimeUnit timeUnit) {
+        bloomFilter.put(key);
+    }
+
+    public void resetBloomFilter() {
+        bloomFilter = BloomFilter.create(
+                Funnels.stringFunnel(StandardCharsets.UTF_8),
+                expectedInsertions,
+                fpp
+        );
     }
 }

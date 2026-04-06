@@ -24,7 +24,13 @@ public enum ErrorCode {
     ROLE_AUTH_ERROR("0204001", "角色权限不足"),
     LOGIN_PARAM_ERROR("0301001", "登录参数错误"),
     TOKEN_EXPIRED("0304001", "Token过期"),
-    TOKEN_INVALID("0304002", "Token无效");
+    TOKEN_INVALID("0304002", "Token无效"),
+    
+    RATE_LIMIT_EXCEEDED("0400001", "请求过于频繁，请稍后再试"),
+    IP_RATE_LIMIT_EXCEEDED("0401001", "IP请求过于频繁，请稍后再试"),
+    USER_RATE_LIMIT_EXCEEDED("0402001", "用户请求过于频繁，请稍后再试"),
+    API_RATE_LIMIT_EXCEEDED("0403001", "接口请求过于频繁，请稍后再试"),
+    IDEMPOTENT_ERROR("0404001", "重复请求，请稍后再试");
 
     private final String code;
     private final String message;

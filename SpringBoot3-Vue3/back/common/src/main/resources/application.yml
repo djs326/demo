@@ -17,13 +17,22 @@ spring:
       port: 6379
       password:
       database: 0
-      timeout: 3000ms
+      timeout: 5000ms
       lettuce:
         pool:
-          max-active: 8
-          max-wait: -1ms
-          max-idle: 8
-          min-idle: 0
+          max-active: 20
+          max-wait: 3000ms
+          max-idle: 10
+          min-idle: 2
+        shutdown-timeout: 100ms
+
+cache:
+  bloom-filter:
+    expected-insertions: 1000000
+    fpp: 0.001
+  rate-limiter:
+    permits-per-second: 100
+  random-expire-time-range: 600000
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
@@ -83,3 +92,31 @@ resilience4j:
         exponentialBackoffMultiplier: 2
         retryExceptions:
           - java.lang.RuntimeException
+
+# Actuator 配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5, 0.95, 0.99

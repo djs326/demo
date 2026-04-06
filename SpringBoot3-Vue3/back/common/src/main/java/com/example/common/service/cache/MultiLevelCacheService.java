@@ -4,9 +4,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class MultiLevelCacheService {
@@ -20,18 +24,18 @@ public class MultiLevelCacheService {
     @Autowired
     private CacheProtectionService cacheProtectionService;
 
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
     public <T> T get(String cacheName, String key, Callable<T> valueLoader) {
-        // 1. 检查是否可能是缓存穿透
         if (cacheProtectionService.isPossibleCachePenetration(key)) {
             return null;
         }
 
-        // 2. 尝试获取令牌，进行限流
         if (!cacheProtectionService.tryAcquireToken()) {
             throw new RuntimeException("Too many requests, please try again later");
         }
 
-        // 3. 先从本地缓存获取
         Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
         if (caffeineCache != null) {
             Cache.ValueWrapper valueWrapper = caffeineCache.get(key);
@@ -40,13 +44,11 @@ public class MultiLevelCacheService {
             }
         }
 
-        // 4. 从Redis缓存获取
         org.springframework.data.redis.cache.RedisCache redisCache = (org.springframework.data.redis.cache.RedisCache) redisCacheManager.getCache(cacheName);
         if (redisCache != null) {
             Cache.ValueWrapper valueWrapper = redisCache.get(key);
             if (valueWrapper != null) {
                 T value = (T) valueWrapper.get();
-                // 将Redis缓存的值同步到本地缓存
                 if (caffeineCache != null) {
                     caffeineCache.put(key, value);
                 }
@@ -54,46 +56,61 @@ public class MultiLevelCacheService {
             }
         }
 
-        // 5. 如果都没有，尝试获取信号量，防止缓存击穿
         if (!cacheProtectionService.tryAcquireSemaphore(key)) {
-            // 如果获取不到信号量，等待一段时间后重试
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            // 重试获取缓存
             return get(cacheName, key, valueLoader);
         }
 
-        // 6. 调用valueLoader加载数据
         try {
             T value = valueLoader.call();
             if (value != null) {
-                // 标记key存在，防止缓存穿透
                 cacheProtectionService.markKeyExists(key);
-                // 同时更新本地缓存和Redis缓存
                 if (caffeineCache != null) {
                     caffeineCache.put(key, value);
                 }
                 if (redisCache != null) {
                     redisCache.put(key, value);
                 }
+            } else {
+                cacheProtectionService.addNullValueProtection(cacheName, key, 5, TimeUnit.MINUTES);
             }
             return value;
         } catch (Exception e) {
             throw new RuntimeException("Failed to load cache value", e);
         } finally {
-            // 释放信号量
             cacheProtectionService.releaseSemaphore(key);
         }
     }
 
+    public <T> T getFromLocal(String cacheName, String key) {
+        Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
+        if (caffeineCache != null) {
+            Cache.ValueWrapper valueWrapper = caffeineCache.get(key);
+            if (valueWrapper != null) {
+                return (T) valueWrapper.get();
+            }
+        }
+        return null;
+    }
+
+    public <T> T getFromRedis(String cacheName, String key) {
+        org.springframework.data.redis.cache.RedisCache redisCache = (org.springframework.data.redis.cache.RedisCache) redisCacheManager.getCache(cacheName);
+        if (redisCache != null) {
+            Cache.ValueWrapper valueWrapper = redisCache.get(key);
+            if (valueWrapper != null) {
+                return (T) valueWrapper.get();
+            }
+        }
+        return null;
+    }
+
     public void put(String cacheName, String key, Object value) {
-        // 标记key存在，防止缓存穿透
         cacheProtectionService.markKeyExists(key);
         
-        // 同时更新本地缓存和Redis缓存
         Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
         if (caffeineCache != null) {
             caffeineCache.put(key, value);
@@ -105,8 +122,65 @@ public class MultiLevelCacheService {
         }
     }
 
+    public void put(String cacheName, String key, Object value, long timeout, TimeUnit unit) {
+        cacheProtectionService.markKeyExists(key);
+        
+        Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
+        if (caffeineCache != null) {
+            caffeineCache.put(key, value);
+        }
+
+        String redisKey = cacheName + ":" + key;
+        redisTemplate.opsForValue().set(redisKey, value, timeout, unit);
+    }
+
+    public void putIfAbsent(String cacheName, String key, Object value) {
+        Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
+        if (caffeineCache != null) {
+            caffeineCache.putIfAbsent(key, value);
+        }
+
+        org.springframework.data.redis.cache.RedisCache redisCache = (org.springframework.data.redis.cache.RedisCache) redisCacheManager.getCache(cacheName);
+        if (redisCache != null) {
+            redisCache.putIfAbsent(key, value);
+        }
+    }
+
+    public void putAll(String cacheName, Map<? extends Object, ? extends Object> map) {
+        Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
+        if (caffeineCache != null) {
+            for (Map.Entry<? extends Object, ? extends Object> entry : map.entrySet()) {
+                caffeineCache.put(entry.getKey(), entry.getValue());
+                cacheProtectionService.markKeyExists(String.valueOf(entry.getKey()));
+            }
+        }
+
+        org.springframework.data.redis.cache.RedisCache redisCache = (org.springframework.data.redis.cache.RedisCache) redisCacheManager.getCache(cacheName);
+        if (redisCache != null) {
+            for (Map.Entry<? extends Object, ? extends Object> entry : map.entrySet()) {
+                redisCache.put(entry.getKey(), entry.getValue());
+            }
+        }
+    }
+
+    public boolean exists(String cacheName, String key) {
+        Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
+        if (caffeineCache != null) {
+            Cache.ValueWrapper valueWrapper = caffeineCache.get(key);
+            if (valueWrapper != null) {
+                return true;
+            }
+        }
+
+        org.springframework.data.redis.cache.RedisCache redisCache = (org.springframework.data.redis.cache.RedisCache) redisCacheManager.getCache(cacheName);
+        if (redisCache != null) {
+            Cache.ValueWrapper valueWrapper = redisCache.get(key);
+            return valueWrapper != null;
+        }
+        return false;
+    }
+
     public void evict(String cacheName, String key) {
-        // 同时删除本地缓存和Redis缓存
         Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
         if (caffeineCache != null) {
             caffeineCache.evict(key);
@@ -118,8 +192,23 @@ public class MultiLevelCacheService {
         }
     }
 
+    public void evictAll(String cacheName, Collection<String> keys) {
+        Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
+        if (caffeineCache != null) {
+            for (String key : keys) {
+                caffeineCache.evict(key);
+            }
+        }
+
+        org.springframework.data.redis.cache.RedisCache redisCache = (org.springframework.data.redis.cache.RedisCache) redisCacheManager.getCache(cacheName);
+        if (redisCache != null) {
+            for (String key : keys) {
+                redisCache.evict(key);
+            }
+        }
+    }
+
     public void clear(String cacheName) {
-        // 同时清空本地缓存和Redis缓存
         Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
         if (caffeineCache != null) {
             caffeineCache.clear();
@@ -128,6 +217,30 @@ public class MultiLevelCacheService {
         org.springframework.data.redis.cache.RedisCache redisCache = (org.springframework.data.redis.cache.RedisCache) redisCacheManager.getCache(cacheName);
         if (redisCache != null) {
             redisCache.clear();
+        }
+    }
+
+    public boolean expire(String cacheName, String key, long timeout, TimeUnit unit) {
+        String redisKey = cacheName + ":" + key;
+        return Boolean.TRUE.equals(redisTemplate.expire(redisKey, timeout, unit));
+    }
+
+    public long getExpire(String cacheName, String key) {
+        String redisKey = cacheName + ":" + key;
+        Long ttl = redisTemplate.getExpire(redisKey, TimeUnit.SECONDS);
+        return ttl != null ? ttl : -1;
+    }
+
+    public void refreshLocalCache(String cacheName, String key) {
+        org.springframework.data.redis.cache.RedisCache redisCache = (org.springframework.data.redis.cache.RedisCache) redisCacheManager.getCache(cacheName);
+        if (redisCache != null) {
+            Cache.ValueWrapper valueWrapper = redisCache.get(key);
+            if (valueWrapper != null) {
+                Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
+                if (caffeineCache != null) {
+                    caffeineCache.put(key, valueWrapper.get());
+                }
+            }
         }
     }
 }
