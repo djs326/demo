@@ -1,9 +1,8 @@
 <template>
-  <router-view></router-view>
+  <div id="app">
+    <router-view />
+  </div>
 </template>
-
-<script setup>
-</script>
 
 <style>
 * {
@@ -12,8 +11,14 @@
   box-sizing: border-box;
 }
 
+body {
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #333;
+}
+
 #app {
-  width: 100%;
-  height: 100vh;
+  min-height: 100vh;
 }
 </style>
